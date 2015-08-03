@@ -7,23 +7,20 @@ const int linelength = 16;
 const int maxlines = 2;
 const int maxsize = (linelength * maxlines) + 1;//(lines * length) + 1
 
+LiquidCrystal lcd(9, 8, 5, 4, 3, 2);
+
 void lcdprintstr(String data){
     Serial.print("Writing to display: ");
     Serial.println(data);
-    // set up the LCD's number of columns and rows:
-    LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
-    lcd.begin(16, 2);
-    lcd.noCursor();
-    lcd.noDisplay();
+    
     lcd.clear();
-    delay(500);
     lcd.setCursor(0, 0);
-    lcd.print(data.substring(0, 16).c_str());
-    delay(500);
+    //lcd.print(millis()/1000);
+    lcd.print(data.substring(0, 16));
     lcd.setCursor(0, 1);
-    lcd.print(millis(), DEC);
-    delay(500);
-    lcd.display();
+    lcd.print(data.substring(16, 32));
+    //lcd.print(millis()/1000);
+    delay(100);
 }
 
 void setup()
@@ -31,25 +28,21 @@ void setup()
   
   Serial.begin(9600);
   
-  String initmsg = "MTA Bus Time 1.0Waiting for data";
-  lcdprintstr(initmsg);
-  
   // Init the chibi wireless stack
   chibiInit();
   
   chibiSetShortAddr(ME);
+  
+  lcd.begin(16, 2);
+  
+  String initmsg = "MTA Bus Time 1.0Waiting for data";
+  lcdprintstr(initmsg);
   
   Serial.println("Ready!");
 }
 
 void loop()
 { 
-  String initmsg(millis());
-  lcdprintstr(initmsg);
-  delay(500);
-  
-  return;
-
   //constantly receive
   if (chibiDataRcvd() == true)
   {

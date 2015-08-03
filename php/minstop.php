@@ -47,9 +47,9 @@ if(!is_numeric($stopid)){
 }
 
 $key = "";//TODO: fill in the key
-$url_template = "http://bustime.mta.info/api/siri/stop-monitoring.json?key=$key&OperatorRef=MTA&StopMonitoringDetailLevel=minimum&MonitoringRef=%d";
+$url_template = "http://bustime.mta.info/api/siri/stop-monitoring.json?key=$s&OperatorRef=MTA&StopMonitoringDetailLevel=minimum&MonitoringRef=%d";
 
-$url = sprintf($url_template, $stopid);
+$url = sprintf($url_template, $key, $stopid);
 
 $json_data = get_html_site($url);
 $data = json_decode($json_data, TRUE);

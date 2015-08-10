@@ -3,6 +3,10 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
+#define BPSK_MODE 3
+#define CHB_RATE_250KBPS 0
+#define FREAKDUINO_LONG_RANGE 1
+
 int linelength = 16;
 int maxlines = 2;
 
@@ -27,6 +31,10 @@ void setup()
   
   // Init the chibi wireless stack
   chibiInit();
+  chibiSetChannel(7);//7=918MHz which is likely to receive little interference and still be USA legal
+  chibiSetMode(BPSK_MODE);
+  chibiSetDataRate(CHB_RATE_250KBPS);
+  chibiHighGainModeEnable();
   
   chibiSetShortAddr(0);
   
@@ -54,7 +62,11 @@ void loop(){
   
   transmit(data);
   
-  delay(30000);
+  byte rssi = chibiGetRSSI();
+  Serial.print("RSSI = "); 
+  Serial.println(rssi, HEX);
+  
+  delay(5000);
 }
 
 String gethttp(){

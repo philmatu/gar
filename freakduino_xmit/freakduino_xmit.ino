@@ -19,8 +19,8 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 EthernetClient outboundclient;//for making outbound requests
 
 //request to remote api
-char GETURL[] = "GET /tools-dev/minstop.php?lines=2&linelen=16&id=%s HTTP/1.1";
-char serverUrl[] = "query.mtabuscis.net";
+char GETURL[] = "GET /?lines=2&linelen=16&id=%s HTTP/1.1";
+char serverUrl[] = "gar.mtabuscis.net";
 char* url = (char *) malloc(256);//1 malloc for entire program
 
 void setup()
@@ -31,7 +31,7 @@ void setup()
   
   // Init the chibi wireless stack
   chibiInit();
-  chibiSetChannel(7);//7=918MHz which is likely to receive little interference and still be USA legal
+  chibiSetChannel(2);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
   chibiHighGainModeEnable();
@@ -51,7 +51,7 @@ void setup()
 void loop(){
   
   String data = gethttp();
-  if(data.length() < 5){
+  if(data.length() < 4){
     delay(5000);
     return;
   }
@@ -61,10 +61,6 @@ void loop(){
   Serial.println("++");
   
   transmit(data);
-  
-  byte rssi = chibiGetRSSI();
-  Serial.print("RSSI = "); 
-  Serial.println(rssi, HEX);
   
   delay(5000);
 }

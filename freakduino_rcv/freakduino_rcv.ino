@@ -34,7 +34,7 @@ void setup()
   
   // Init the chibi wireless stack
   chibiInit();
-  chibiSetChannel(7);//7=918MHz which is likely to receive little interference and still be USA legal
+  chibiSetChannel(2);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
   chibiHighGainModeEnable();
@@ -54,6 +54,10 @@ void loop()
   //constantly receive
   if (chibiDataRcvd() == true)
   {
+    byte rssi = chibiGetRSSI();
+    Serial.print("RSSI = "); 
+    Serial.println(rssi, HEX);
+    
     char data[maxsize + 1];
     data[maxsize] = '\0';
     
@@ -61,12 +65,11 @@ void loop()
     chibiGetData(buf);
     strncpy(data, (char*) buf, maxsize-1);
     
-    String lcdtext(data);
-    lcdprintstr(lcdtext);
+    String temp = String(data);
+    String out = temp.substring(0, 16) + "-" + String(rssi, DEC) + "db up:" + (millis()/1000);
     
-    byte rssi = chibiGetRSSI();
-    Serial.print("RSSI = "); 
-    Serial.println(rssi, HEX);
+    lcdprintstr(out);
+    
   }
 
 }

@@ -74,11 +74,11 @@ foreach($data['Siri']['ServiceDelivery']['StopMonitoringDelivery'] as $msv){
 				$diff = $eta_epoch - $recordedtime_epoch;
 				if($diff > 0){
 					$diff_min = ceil($diff / 60);
-					array_push($timeitems, $route."!".$diff_min);
+					array_push($timeitems, $route."@".$diff_min);
 				}
 			}else{
 				$stops = $items['MonitoredCall']['Extensions']['Distances']['StopsFromCall'];
-				array_push($stopitems, $route."!".$stops);
+				array_push($stopitems, $route."#".$stops);
 			}
 		}
 	}
@@ -88,7 +88,7 @@ $count = 0;
 if(count($timeitems) > 0){
 	foreach($timeitems as $line){
 		if($lineoutput > $count){
-			echo "m$line\n";
+			echo "$line\n";
 			$count++;
 		}
 	}
@@ -96,7 +96,7 @@ if(count($timeitems) > 0){
 if($lineoutput > $count){
 	foreach($stopitems as $line){
 		if($lineoutput > $count){
-			echo "s$line\n";
+			echo "$line\n";
 			$count++;
 		}
 	}

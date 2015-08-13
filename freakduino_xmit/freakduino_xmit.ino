@@ -3,12 +3,12 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
+#define CHANNEL 3
 #define BPSK_MODE 3
 #define CHB_RATE_250KBPS 0
 #define FREAKDUINO_LONG_RANGE 1
 
-int linelength = 16;
-int maxlines = 2;
+uint8_t AESKEY = 329093092;
 
 //broadcasts this stop id... eventually only send to interested party
 char stopid[] = "101924";
@@ -19,19 +19,21 @@ byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 EthernetClient outboundclient;//for making outbound requests
 
 //request to remote api
-char GETURL[] = "GET /?lines=2&linelen=16&id=%s HTTP/1.1";
+char GETURL[] = "GET /?lines=4&id=%s HTTP/1.1";
 char serverUrl[] = "gar.mtabuscis.net";
-char* url = (char *) malloc(256);//1 malloc for entire program
+char* url = (char *) malloc(128);//1 malloc for entire program
 
 void setup()
 {
+  
   Serial.begin(9600);
   
   Serial.println("Starting... ");
   
   // Init the chibi wireless stack
   chibiInit();
-  chibiSetChannel(2);
+  chibiSetChannel(CHANNEL);
+  chibiAesInit(&AESKEY);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
   chibiHighGainModeEnable();
@@ -39,44 +41,46 @@ void setup()
   chibiSetShortAddr(0);
   
   Ethernet.select(8);
-  
   Ethernet.begin(mac);
   Serial.println(Ethernet.localIP());          // start to listen for clients
   
-  delay(5000);
+  delay(1000);
   
   Serial.println("Ready!");
 }
 
 void loop(){
   
-  String data = gethttp();
-  if(data.length() < 4){
+  char* data = gethttp();
+  int len = strlen(data);
+  if(len < 2){
     delay(5000);
     return;
   }
   
-  Serial.print("++");
-  Serial.print(data);
-  Serial.println("++");
+  //char* out;
+  //chibiAesEncrypt(len, (uint8_t*)data, (uint8_t*)out);
   
-  transmit(data);
+  transmit(data);//just transmit the minimized data!
   
-  delay(5000);
+  delay(15000);
 }
 
-String gethttp(){
+char* gethttp(){
   sprintf(url, GETURL, stopid);
   
   Serial.print("Requesting url: ");
   Serial.println(url);
   
-  String data = "";
+  int pointer = 0;
+  char data[256];
   if (outboundclient.connect(serverUrl, 80)) {
+    delay(50);
     outboundclient.println(url);
     outboundclient.print("Host: ");
     outboundclient.println(serverUrl);
     outboundclient.println("Connection: close\r\n");
+    delay(50);
     boolean start = false;
     int stage = 0;
     while(true){
@@ -84,7 +88,8 @@ String gethttp(){
         char c = outboundclient.read();
         if(start){
           //Serial.println("p");
-          data = data + c;
+          data[pointer] = c;
+          pointer++;
         }else{
           //look for \r\n\r\n signifying that the headers have been sent fully
           if(stage == 0){
@@ -121,37 +126,35 @@ String gethttp(){
       }
     
       if (!outboundclient.connected()) {
+        delay(50);
+        data[pointer] = '\0';//termination of string
         outboundclient.stop();
+        delay(50);
         return data;
       }
     }
   }
 }
 
-void transmit(String msg){
+void transmit(char* msg){
   
-  int len = msg.length();
-  if(len > 32){
-    len = 32;
-  }
+  int len = strlen(msg)+1;
   
-  byte data[len+1];
+  byte data[len];
   
-  strncpy((char *)data, msg.c_str(), len);
+  strncpy((char *)data, msg, len);
   data[len] = '\0';
   
-  Serial.print("_XMIT__");
+  Serial.print("___XMIT___=");
   Serial.print((char *)data);
   Serial.println("___");
   
   //BROADCAST_ADDR
   chibiTx(BROADCAST_ADDR, data, len);//includes null byte on xmit
 
-  delay(1000);
-
   int i = 0;
   //wipe out data var
-  for(i=0; i<len+1; i++){
+  for(i=0; i<len; i++){
     data[i] = '\0';
   }
 }

@@ -27,16 +27,10 @@ if(!isset($_GET['id'])) {
 	exit();
 }
 
-$lineoutput = 2;
+$lineoutput = 5;
 if(isset($_GET['lines'])) {
 	if(is_numeric($_GET['lines'])){
 		$lineoutput = $_GET['lines'];
-	}
-}
-$linelen = 16;
-if(isset($_GET['linelen'])) {
-	if(is_numeric($_GET['linelen'])){
-		$linelen = $_GET['linelen'];
 	}
 }
 
@@ -46,10 +40,9 @@ if(!is_numeric($stopid)){
 	exit();
 }
 
-$key = "";//TODO: fill in the key
-$url_template = "http://bustime.mta.info/api/siri/stop-monitoring.json?key=$s&OperatorRef=MTA&StopMonitoringDetailLevel=minimum&MonitoringRef=%d";
+$url_template = "http://bustime.mta.info/api/siri/stop-monitoring.json?key=TEST&OperatorRef=MTA&StopMonitoringDetailLevel=minimum&MonitoringRef=%d";
 
-$url = sprintf($url_template, $key, $stopid);
+$url = sprintf($url_template, $stopid);
 
 $json_data = get_html_site($url);
 $data = json_decode($json_data, TRUE);
@@ -59,7 +52,7 @@ $servtime_epoch = strtotime($servtime);
 
 $timeitems = array();
 $stopitems = array();
-foreach($data['Siri']['ServiceDelivery']['StopMonitoringDelivery'] as $msv){	
+foreach($data['Siri']['ServiceDelivery']['StopMonitoringDelivery'] as $msv){
 	if(isset($msv['ErrorCondition'])){
 		echo "END\nGET Parameter 'id' for stop $stopid doesn't exist, some error occurred.";
 		exit();
@@ -81,11 +74,11 @@ foreach($data['Siri']['ServiceDelivery']['StopMonitoringDelivery'] as $msv){
 				$diff = $eta_epoch - $recordedtime_epoch;
 				if($diff > 0){
 					$diff_min = ceil($diff / 60);
-					array_push($timeitems, $route.": ".$diff_min."mins");
+					array_push($timeitems, $route."!".$diff_min);
 				}
 			}else{
 				$stops = $items['MonitoredCall']['Extensions']['Distances']['StopsFromCall'];
-				array_push($stopitems, $route.": ".$stops."stop");
+				array_push($stopitems, $route."!".$stops);
 			}
 		}
 	}
@@ -95,7 +88,7 @@ $count = 0;
 if(count($timeitems) > 0){
 	foreach($timeitems as $line){
 		if($lineoutput > $count){
-			echo str_pad($line, $linelen);
+			echo "m$line\n";
 			$count++;
 		}
 	}
@@ -103,11 +96,11 @@ if(count($timeitems) > 0){
 if($lineoutput > $count){
 	foreach($stopitems as $line){
 		if($lineoutput > $count){
-			echo str_pad($line, $linelen);
+			echo "s$line\n";
 			$count++;
 		}
 	}
-	
+
 }
 
 ?>

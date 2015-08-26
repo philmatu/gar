@@ -13,8 +13,8 @@ uint8_t AESKEY = 329093092;
 char* dataReceived = "MTA Bus Time 1.1\nWaiting for data";
 boolean dataRCVD = false;
 unsigned long systemRunningTime = 0;
-unsigned short informationDropOffThreshold = 3; // 3 mins
-unsigned short informationUpdateRate = 4000; // 4 secs
+unsigned short informationDropOffThreshold = 60000*3; // 3 mins
+unsigned short informationUpdateRate = 10000; // 10 secs
 
 LiquidCrystal lcd(9, 8, 5, 4, 3, 2);
 
@@ -44,7 +44,7 @@ void loop()
     ProcessTextToLCD(dataReceived);
     Serial.println(dataReceived);
   }
-  else if (!dataRCVD && ((millis() - systemRunningTime)/60000) % informationDropOffThreshold == 0 )
+  else if (!dataRCVD && ((millis() - systemRunningTime)) % informationDropOffThreshold == 0 )
   {
     dataReceived = (char*) "MTA Bus Time 1.2\nWaiting for data";
   }
@@ -73,11 +73,12 @@ boolean isRCVD()
  */
 void ProcessTextToLCD(char* dataRecived)
 {
-  char* dataRecivedCopy = (char*) malloc(strlen(dataRecived) + 1); 
-  strcpy(dataRecivedCopy, dataRecived);
   unsigned short int count = 0;
 
+  char* dataRecivedCopy = (char*) malloc(strlen(dataRecived) + 1); 
+  strcpy(dataRecivedCopy, dataRecived);
   char * line = strtok(dataRecived, "\n"); 
+
   while(line != NULL)
   {
     if(count == 2)
@@ -179,6 +180,7 @@ char* appendCharPointer(char* dest, char src[])
  return ret;
  }
  */
+
 
 
 

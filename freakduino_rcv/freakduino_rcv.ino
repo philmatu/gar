@@ -52,8 +52,8 @@ void loop()
 }
 /*
   Fetching Bus Time Data
-  
-*/
+ 
+ */
 boolean isRCVD()
 { 
   if (chibiDataRcvd() == true)
@@ -70,7 +70,7 @@ boolean isRCVD()
 
 /*
    Processing Text to LCD
-*/
+ */
 void ProcessTextToLCD(char* dataRecived)
 {
   char* dataRecivedCopy = (char*) malloc(strlen(dataRecived) + 1); 
@@ -97,13 +97,13 @@ void ProcessTextToLCD(char* dataRecived)
 
 /*
   Process Bus Time Text
-*/
+ */
 
 String getArrival(char* busArrival)
 {     
   //@ Defines Minutes Away
   //# Defines Stops Away
-  
+
   String temp = "";
 
   if(char * separator = strchr(busArrival, '@'))
@@ -136,11 +136,11 @@ String getArrival(char* busArrival)
 }
 /*
   Count Down for stale data
-*/
+ */
 int countDownTime(int input)
 {
   int staleDataMinutes = (millis()-systemRunningTime)/60000;
-  
+
   if(staleDataMinutes > input)
     return 0;
   else
@@ -149,7 +149,7 @@ int countDownTime(int input)
 
 /*
   Update LCD screen by a given row
-*/
+ */
 void updateLCDScreen(String Line, unsigned short int row)
 {
   char clsChar[17] = "                ";
@@ -179,6 +179,7 @@ char* appendCharPointer(char* dest, char src[])
  return ret;
  }
  */
+
 
 
 

@@ -13,7 +13,7 @@
 #define DISPLAY_COLUMNS 16 // how many columns are there on the display?
 #define DISPLAY_LINES 2 // how many lines are on the display?
 #define SCROLL_LINES 2 // how many additional lines should the last row scroll through (doesn't include message lines)
-#define SCROLL_RATE 5 // seconds
+#define SCROLL_RATE 6 // seconds
 #define RECEIVE_TIMEOUT 180 // seconds
 #define DEFAULT_PSA_TIMEOUT 900 // seconds (900 seconds is 15 minutes), this is only used in the case of the system clock resetting after 57 days
 
@@ -114,6 +114,9 @@ void loop()
   {
     lastScrollTime = millis();
     updated = true;
+  }else if(updated == true){
+    //delay the scroll for a few more seconds to prevent sudden jumps due to a new set of data being received
+    delay(3);
   }
   
   //update the display
@@ -218,7 +221,6 @@ void processReceivedLine(char* line, int count)
       *separator = 0;
       
       strcpy(displayRoute[count], line);
-      strcpy(displayRoute[count]+strlen(displayRoute[count]), ": ");
       
       displayType[count] = type;
       displayDistance[count] = x_away;
@@ -349,10 +351,14 @@ void writeDisplayUpdate()
 // this method copies data from a source row (from received data) to a destination row on the display (the datastructure that feeds what the display shows)
 void copyData(int fromDataRow, int toDisplayRow)
 {
-    
-  strcpy(displayText[toDisplayRow], displayRoute[fromDataRow]); // appends a final null character that is erased by the next copy
-  char tempInt[10];
-  sprintf(tempInt, "%d", displayDistance[fromDataRow]);
+  char rowidAndSpace[4];
+  sprintf(rowidAndSpace, "%d ", fromDataRow+1);
+  
+  strcpy(displayText[toDisplayRow], rowidAndSpace);
+  strcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), displayRoute[fromDataRow]); // appends a final null character that is erased by the next copy
+  
+  char distminValue[10];
+  sprintf(distminValue, " %d", displayDistance[fromDataRow]);
   
   if(displayType[fromDataRow] == 0){ // 0 is minutes
     if(displayDistance[fromDataRow] < 1)
@@ -361,20 +367,20 @@ void copyData(int fromDataRow, int toDisplayRow)
       memcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), " DUE", 4);
     }else{
       // in the case of 1 or more minutes remaining, just write that number followed by min (for minutes)
-      strcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), tempInt); // copy the number to the main output string
+      strcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), distminValue); // copy the number to the main output string
       if(minutesCountedDown > 0)
       {
         // when the system removed a minute, place a * at the end to denote it's estimated
-        memcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), " min*", 5);
+        memcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), "m*", 3);
       }else{
         // if the received data is current, don't display a *
-        memcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), " min", 4);
+        memcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), "m", 2);
       }
     }
   }else if(displayType[fromDataRow] == 1){ // 1 is stops
     // write out to the main display string how many stops remain
-    strcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), tempInt); // copy the number to the main output string
-    memcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), " stops", 6);
+    strcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), distminValue); // copy the number to the main output string
+    memcpy(displayText[toDisplayRow]+strlen(displayText[toDisplayRow]), "s", 2);
   }
 }  
 

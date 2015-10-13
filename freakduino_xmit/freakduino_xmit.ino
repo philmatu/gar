@@ -164,6 +164,13 @@ void transmit(char* msg){
   //BROADCAST_ADDR
   chibiTx(BROADCAST_ADDR, data, len);//includes null byte on xmit
 
+/*
+  //xmit duplication
+  delay(1500);
+  Serial.println("duplico");
+  chibiTx(BROADCAST_ADDR, data, len);//includes null byte on xmit
+*/
+
   int i = 0;
   //wipe out data var
   for(i=0; i<len; i++){

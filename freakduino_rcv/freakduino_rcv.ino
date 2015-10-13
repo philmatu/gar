@@ -19,9 +19,12 @@
 
 //for wireless reception
 byte recvBuffer[256];
+byte recvBufferBak[256];
+char lastHeader[32] = {'\0'};
 unsigned long lastReceivedTime = 0; // next display update should happen in SCROLL_RATE seconds initially (millis() will be 0 in theory)
 unsigned int minutesCountedDown = 0; // tracker to determine if we should remove a minute from the last displayDistance array (for type = minutes)
 unsigned long lastScrollTime = 0;
+char* delimeter = "\n";
 unsigned short debugMode = 0;
 unsigned long lastReceivedTimeDebug = 0;
 byte receivedRSSI = 0;
@@ -137,11 +140,27 @@ boolean isRCVD()
 { 
   if(chibiDataRcvd() == true)
   {
-    Serial.println("Receiving data.");
     memset((char*)&recvBuffer[0], 0, 256);
     int len = chibiGetData(recvBuffer);
+    memcpy(recvBufferBak, recvBuffer, 256);
     receivedRSSI = chibiGetRSSI();
-    return true;
+    
+    //process the first line of the string received (strtok is destructive, later processing can resume normally as if first line doesn't exist)
+    char* dataReceivedPointer = (char*)recvBuffer;
+    char* first = strtok(dataReceivedPointer, delimeter);
+    
+    if(strcmp(lastHeader, first) != 0)
+    {
+      Serial.println("Receiving NEW data, retransmission now then processing.");
+      strcpy(lastHeader, first);
+      Serial.println((char*)recvBufferBak);
+      //retransmit!
+      int txlen = strlen((char*)recvBufferBak)+1;
+      chibiTx(BROADCAST_ADDR, recvBufferBak, txlen);
+      return true;
+    }
+    Serial.println("Receiving OLD data, nothing happens now.");
+    return false;
   }
   
   return false;
@@ -171,13 +190,11 @@ void processReceivedData()
   int count = 0;
   int maxcount = SCROLL_LINES + DISPLAY_LINES;
   
-  char* delimeter = "\n";
   char* dataReceivedPointer = (char*)recvBuffer;
-  char* line = strtok(dataReceivedPointer, delimeter); 
+  char* line = strtok(NULL, delimeter); 
   
   while(line != NULL && debugMode < 1 ) // break out of the loop if we're in debug mode
   {
-    
     //only save enough data for the display
     if(count < maxcount)
     {

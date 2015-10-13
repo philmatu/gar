@@ -2,9 +2,9 @@
 #include <chibi.h>
 
 //TODO: need someway to reduce this to 16 bits or 65535 max
-#define STOP_ID 1234 // what is my local stop id to listen for over the air?
+#define STOP_ID 1235 // what is my local stop id to listen for over the air?
 
-#define VERSION "1.3"
+#define VERSION "1.4"
 #define CHANNEL 3 // use channels 1-9
 #define BPSK_MODE 3
 #define CHB_RATE_250KBPS 0
@@ -22,6 +22,9 @@ byte recvBuffer[256];
 unsigned long lastReceivedTime = 0; // next display update should happen in SCROLL_RATE seconds initially (millis() will be 0 in theory)
 unsigned int minutesCountedDown = 0; // tracker to determine if we should remove a minute from the last displayDistance array (for type = minutes)
 unsigned long lastScrollTime = 0;
+unsigned short debugMode = 0;
+unsigned long lastReceivedTimeDebug = 0;
+byte receivedRSSI = 0;
 
 char psa[17] = {'\0'}; // public service announcements can be up to 16 characters long or one standard display line
 unsigned long psa_timeout = 0;
@@ -90,7 +93,7 @@ void loop()
     
   }
   
-    //check to see if the received data is too old
+  //check to see if the received data is too old
   if( lastReceivedTime != 0 && ( (RECEIVE_TIMEOUT * 1000L) + lastReceivedTime ) < millis() )
   {
     Serial.print("The received data timed out, deleting it");
@@ -137,6 +140,7 @@ boolean isRCVD()
     Serial.println("Receiving data.");
     memset((char*)&recvBuffer[0], 0, 256);
     int len = chibiGetData(recvBuffer);
+    receivedRSSI = chibiGetRSSI();
     return true;
   }
   
@@ -157,9 +161,11 @@ void processReceivedData()
     // expires is in seconds, message will be what is displayed
     // this system stores only the last [max] 16-character message separately from normal stop data along with an expiration timeout and round-robins it with the stop data
   */
-  
+    
   //clear out the existing array of lcd text
   clearReceivedData();
+  debugMode = 0; // disable debug mode
+  lastReceivedTimeDebug = 0;
   
   lastReceivedTime = millis();
   int count = 0;
@@ -169,8 +175,9 @@ void processReceivedData()
   char* dataReceivedPointer = (char*)recvBuffer;
   char* line = strtok(dataReceivedPointer, delimeter); 
   
-  while(line != NULL)
+  while(line != NULL && debugMode < 1 ) // break out of the loop if we're in debug mode
   {
+    
     //only save enough data for the display
     if(count < maxcount)
     {
@@ -188,9 +195,15 @@ void processReceivedData()
 
 void processReceivedLine(char* line, int count)
 {
-  if(line[0] == '*')
+  if(line[0] == '?')
   {
-    
+    // debug mode enable
+    debugMode = 1;
+    lastReceivedTimeDebug = millis();
+    return;
+  }
+  else if(line[0] == '*')
+  {
     //TODO test this method
     clearReceivedPSA();
     // handle broadcast messages
@@ -338,12 +351,28 @@ void writeDisplayUpdate()
   // always display the first line regardless
   lcd.clear();
   
-  int i=0;
-  while(i < DISPLAY_LINES)
+  if(debugMode > 0)
   {
-    lcd.setCursor(0, i);
-    lcd.print(displayText[i]);
-    ++i;
+    // in debug mode
+    // show signal strength of update (line 1)
+    lcd.setCursor(0, 0);
+    lcd.print(receivedRSSI, DEC);
+    lcd.print(", +[84-0]-"); // 84 (-7 dB ) to 0 (-91 dB) 
+    // show seconds since last update (line 2)
+    lcd.setCursor(0, 1);
+    lcd.print("lstx: ");
+    long elapse = millis() - lastReceivedTimeDebug;
+    lcd.print(elapse/1000, DEC);
+  }
+  else
+  {
+    int i=0;
+    while(i < DISPLAY_LINES)
+    {
+      lcd.setCursor(0, i);
+      lcd.print(displayText[i]);
+      ++i;
+    }
   }
   
 }

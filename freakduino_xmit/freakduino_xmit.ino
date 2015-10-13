@@ -8,10 +8,9 @@
 #define CHB_RATE_250KBPS 0
 #define FREAKDUINO_LONG_RANGE 1
 
-uint8_t AESKEY = 329093092;
-
-//broadcasts this stop id... eventually only send to interested party
 char stopid[] = "101924";
+
+uint8_t AESKEY = 329093092;
 
 //ETHERNET CARD
 //connected to pins 0-1, 9-13
@@ -63,7 +62,10 @@ void loop(){
   
   transmit(data);//just transmit the minimized data!
   
-  delay(15000);
+  free(data);
+  
+  // transmit every 10 seconds
+  delay(10000);
 }
 
 char* gethttp(){

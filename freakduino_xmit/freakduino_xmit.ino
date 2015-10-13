@@ -8,6 +8,7 @@
 #define CHB_RATE_250KBPS 0
 #define FREAKDUINO_LONG_RANGE 1
 
+char* myXmitId = "A\0";
 char stopid[] = "101924";
 
 uint8_t AESKEY = 329093092;
@@ -21,6 +22,8 @@ EthernetClient outboundclient;//for making outbound requests
 char GETURL[] = "GET /?lines=4&id=%s HTTP/1.1";
 char serverUrl[] = "gar.mtabuscis.net";
 char* url = (char *) malloc(128);//1 malloc for entire program
+char tempTime[10];
+char* data = (char*)malloc(256*sizeof(char));
 
 void setup()
 {
@@ -50,8 +53,17 @@ void setup()
 
 void loop(){
   
-  char* data = gethttp();
-  int len = strlen(data);
+  ltoa(millis()/1000,tempTime,10);
+  
+  strcpy(data+0, myXmitId);
+  strcpy(data+strlen(data), tempTime);
+  strcpy(data+strlen(data), "\n");
+  
+  char* dldData = gethttp();
+  int len = strlen(dldData);
+  
+  strcpy(data+strlen(data), dldData);
+  
   if(len < 2){
     delay(5000);
     return;
@@ -61,8 +73,6 @@ void loop(){
   //chibiAesEncrypt(len, (uint8_t*)data, (uint8_t*)out);
   
   transmit(data);//just transmit the minimized data!
-  
-  free(data);
   
   // transmit every 10 seconds
   delay(10000);

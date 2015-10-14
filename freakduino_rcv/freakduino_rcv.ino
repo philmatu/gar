@@ -22,8 +22,8 @@ byte recvBuffer[256];
 byte recvBufferBak[256];
 //keeping track of previous messages to avoid a repeat loop (defaults to 6)
 int lastHeaderPos = 0;
-const int lastHeaderMax = 6;
-char lastHeader[lastHeaderMax][16] = {'\0'};
+const int lastHeaderMax = 4;
+char lastHeader[lastHeaderMax][12] = {'\0'};
 unsigned long lastReceivedTime = 0; // next display update should happen in SCROLL_RATE seconds initially (millis() will be 0 in theory)
 unsigned int minutesCountedDown = 0; // tracker to determine if we should remove a minute from the last displayDistance array (for type = minutes)
 unsigned long lastScrollTime = 0;
@@ -87,7 +87,7 @@ void loop()
   //check to see if millis() reset due to being on for 57 days+, since this is a rare occasion, we simply remove all existing timeouts and reset them, which in the worst case, isn't too bad
   if(millis() < lastReceivedTime)
   {
-    Serial.print("Millis has reset, resetting timeouts on receive/psa");
+    Serial.print("Millis has reset");
     
     //when millis resets, give another RECEIVE_TIMEOUT grace period to the last messages (including PSA's)
     lastReceivedTime = (RECEIVE_TIMEOUT * 1000L) + millis();
@@ -102,7 +102,7 @@ void loop()
   //check to see if the received data is too old
   if( lastReceivedTime != 0 && ( (RECEIVE_TIMEOUT * 1000L) + lastReceivedTime ) < millis() )
   {
-    Serial.print("The received data timed out, deleting it");
+    Serial.print("The received data timed out, remov");
     clearReceivedData();
   }
   
@@ -110,7 +110,7 @@ void loop()
   if(psa_timeout != 0 && millis() > psa_timeout)
   {
     //remove the PSA from the queue of messages to be displayed
-    Serial.print("PSA has timed out, removing it");
+    Serial.print("PSA has timed out, remov");
     clearReceivedPSA();
   }
   
@@ -350,7 +350,7 @@ void updateDisplay()
     // is there enough data to copy the next row over to the display or do we need to loop around?
     if( displaySelector >= dataPresent )
     {
-      Serial.println("Display selector reset, not enough data");
+      Serial.println("Display selector reset, insufficient data");
       displaySelector = DISPLAY_LINES-1;
     }
     

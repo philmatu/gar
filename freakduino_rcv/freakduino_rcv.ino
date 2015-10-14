@@ -20,7 +20,10 @@
 //for wireless reception
 byte recvBuffer[256];
 byte recvBufferBak[256];
-char lastHeader[32] = {'\0'};
+//keeping track of previous messages to avoid a repeat loop (defaults to 6)
+int lastHeaderPos = 0;
+const int lastHeaderMax = 6;
+char lastHeader[lastHeaderMax][16] = {'\0'};
 unsigned long lastReceivedTime = 0; // next display update should happen in SCROLL_RATE seconds initially (millis() will be 0 in theory)
 unsigned int minutesCountedDown = 0; // tracker to determine if we should remove a minute from the last displayDistance array (for type = minutes)
 unsigned long lastScrollTime = 0;
@@ -149,18 +152,28 @@ boolean isRCVD()
     char* dataReceivedPointer = (char*)recvBuffer;
     char* first = strtok(dataReceivedPointer, delimeter);
     
-    if(strcmp(lastHeader, first) != 0)
+    int i=0;
+    //have we seen this message before?
+    for(i=0; i<lastHeaderMax; i++)
     {
-      Serial.println("Receiving NEW data, retransmission now then processing.");
-      strcpy(lastHeader, first);
-      Serial.println((char*)recvBufferBak);
-      //retransmit!
-      int txlen = strlen((char*)recvBufferBak)+1;
-      chibiTx(BROADCAST_ADDR, recvBufferBak, txlen);
-      return true;
-    }
-    Serial.println("Receiving OLD data, nothing happens now.");
-    return false;
+      if(strcmp(lastHeader[i], first) == 0)
+      {
+        //data is same
+        Serial.println("Receiving OLD data, nothing happens now.");
+        return false;
+      }
+    }   
+    
+    Serial.println("Receiving NEW data, retransmission now then processing.");
+    strcpy(lastHeader[lastHeaderPos], first);
+    lastHeaderPos = (lastHeaderPos + 1) % lastHeaderMax;
+    Serial.println(lastHeaderPos);
+    Serial.println((char*)recvBufferBak);
+    //retransmit!
+    int txlen = strlen((char*)recvBufferBak)+1;
+    chibiTx(BROADCAST_ADDR, recvBufferBak, txlen);
+    return true;
+    
   }
   
   return false;

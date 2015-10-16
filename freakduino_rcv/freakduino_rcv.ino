@@ -36,6 +36,7 @@ boolean scroll = false;
 char psa[17] = {'\0'}; // public service announcements can be up to 16 characters long or one standard display line
 unsigned long psa_timeout = 0;
 int psa_on = 0; // trigger to determine if PSA is currently being displayed
+char subbuffpsa[16] = {'\0'};//for psa announcement messages
 
 //holds onto data received over the air
 char displayRoute[SCROLL_LINES + DISPLAY_LINES][12]; // worst case: 12 characters, example: "bx142-sbs: \0"
@@ -166,8 +167,7 @@ boolean isRCVD()
     Serial.println("Receiving NEW data, retransmission now then processing.");
     strcpy(lastHeader[lastHeaderPos], first);
     lastHeaderPos = (lastHeaderPos + 1) % lastHeaderMax;
-    Serial.println(lastHeaderPos);
-    Serial.println((char*)recvBufferBak);
+    
     //retransmit!
     int txlen = strlen((char*)recvBufferBak)+1;
     chibiTx(BROADCAST_ADDR, recvBufferBak, txlen);
@@ -210,39 +210,49 @@ void processReceivedData()
     //only save enough data for the display
     if(count < maxcount)
     {
-      processReceivedLine(line, count);
+      processReceivedLine(line, count, true);
       line = strtok(NULL, delimeter);
-      ++count;
     }
     else
     {
-      break;//break out of the while loop
+      //we don't want to save anything into the array now... only look for debug/psa messages
+      processReceivedLine(line, count, false);
+      line = strtok(NULL, delimeter);
+      break;
     }
+    ++count;
   }
   
 }
 
-void processReceivedLine(char* line, int count)
+void processReceivedLine(char* line, int count, boolean save)
 {
   if(line[0] == '?')
   {
     // debug mode enable
     debugMode = 1;
     lastReceivedTimeDebug = millis();
-    return;
   }
-  else if(line[0] == '*')
+  else if(strstr(line, "*") != NULL)
   {
-    //TODO test this method
     clearReceivedPSA();
     // handle broadcast messages
     char* separator = strchr(line, '*');
-    *separator = 0;
-    psa_timeout = millis() + (atoi(line)*1000);
-    strcpy(psa, separator);
+    int len = separator-line;
+    memcpy( subbuffpsa, line, len );
+    subbuffpsa[len] = '\0';
+    long localTimeout = atoi(subbuffpsa);
+    psa_timeout = millis() + (localTimeout * 1000L);
+    strcpy(psa, separator+1);
+    
   }
   else
   {
+    if(save == false)
+    {
+      return;//don't do anything except process psa/debug messages if we don't want to save anything more.
+    }
+    
     //handle regular bus arrival messages
     int type = 0; //0 is minutes, 1 is stops
     char displayLine[DISPLAY_COLUMNS] = {'\0'};

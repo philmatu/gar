@@ -31,6 +31,7 @@ char* delimeter = "\n";
 unsigned short debugMode = 0;
 unsigned long lastReceivedTimeDebug = 0;
 byte receivedRSSI = 0;
+boolean scroll = false;
 
 char psa[17] = {'\0'}; // public service announcements can be up to 16 characters long or one standard display line
 unsigned long psa_timeout = 0;
@@ -122,10 +123,8 @@ void loop()
   if( abs(millis() - lastScrollTime) > (SCROLL_RATE*1000L) )
   {
     lastScrollTime = millis();
+    scroll = true;
     updated = true;
-  }else if(updated == true){
-    //delay the scroll for a few more seconds to prevent sudden jumps due to a new set of data being received
-    delay(3);
   }
   
   //update the display
@@ -329,6 +328,12 @@ void updateDisplay()
     
     psa_on = 0;
     
+    if(scroll == false)
+    {
+      //we don't want to quite scroll yet if the update is triggered by new data
+      --displaySelector;
+    }
+    
     //is there enough data to consider writing a final round robin line?
     if( DISPLAY_LINES > dataPresent )
     {
@@ -357,6 +362,7 @@ void updateDisplay()
     copyData(displaySelector, DISPLAY_LINES-1);
     
     ++displaySelector;
+    scroll = false;//always reset the scroll variable once we've visted this function
     
   }
   

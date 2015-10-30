@@ -409,6 +409,10 @@ void writeDisplayUpdate()
     lcd.print("lstx: ");
     long elapse = millis() - lastReceivedTimeDebug;
     lcd.print(elapse/1000, DEC);
+    
+    Serial.print(receivedRSSI);
+    Serial.print(", +[84-0]-  lstx: ");
+    Serial.println(elapse/1000);
   }
   else
   {
@@ -417,6 +421,9 @@ void writeDisplayUpdate()
     {
       lcd.setCursor(0, i);
       lcd.print(displayText[i]);
+      Serial.print(i);
+      Serial.print(" < line printing to LCD. text: ");
+      Serial.println(displayText[i]);
       ++i;
     }
   }

@@ -342,6 +342,7 @@ void updateDisplay()
     {
       //we don't want to quite scroll yet if the update is triggered by new data
       --displaySelector;
+      Serial.println("Not scrolling");
     }
     
     //is there enough data to consider writing a final round robin line?
@@ -356,8 +357,8 @@ void updateDisplay()
       return; // no further data available
     }
     
-    // round robin display data selector update (if at end of data set, wrap around)
-    if(displaySelector >= (SCROLL_LINES + DISPLAY_LINES))
+    // round robin display data selector update (if at end of data set, wrap around) | on initial startup, new data will prevent scrolling, this corrects that
+    if(displaySelector >= (SCROLL_LINES + DISPLAY_LINES) || displaySelector < DISPLAY_LINES-1)
     {
       displaySelector = DISPLAY_LINES-1;
     }

@@ -8,12 +8,12 @@
 #define CHANNEL 3 // use channels 1-9
 #define BPSK_MODE 3
 #define CHB_RATE_250KBPS 0
-#define HIGH_GAIN true // true/false to enable high gain mode
+#define HIGH_GAIN false // true/false to enable high gain mode
 #define AES_KEY 329093092 // decryption key
 #define DISPLAY_COLUMNS 16 // how many columns are there on the display?
 #define DISPLAY_LINES 2 // how many lines are on the display?
 #define SCROLL_LINES 2 // how many additional lines should the last row scroll through (doesn't include message lines)
-#define SCROLL_RATE 6 // seconds
+#define SCROLL_RATE 1 // seconds
 #define RECEIVE_TIMEOUT 180 // seconds
 #define DEFAULT_PSA_TIMEOUT 900 // seconds (900 seconds is 15 minutes), this is only used in the case of the system clock resetting after 57 days
 

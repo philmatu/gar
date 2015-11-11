@@ -9,7 +9,8 @@
 #define FREAKDUINO_LONG_RANGE 1
 
 char* myXmitId = "A\0";
-char stopid[] = "101924";
+char stopid[] = "404190"; //x1 out front of 2 broadway
+int xmitdelay = 3;//seconds
 
 uint8_t AESKEY = 329093092;
 
@@ -38,7 +39,7 @@ void setup()
   chibiAesInit(&AESKEY);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
-  chibiHighGainModeEnable();
+  //chibiHighGainModeEnable();
   
   chibiSetShortAddr(0);
   
@@ -74,8 +75,8 @@ void loop(){
   
   transmit(data);//just transmit the minimized data!
   
-  // transmit every 10 seconds
-  delay(10000);
+  // transmit every x seconds
+  delay(xmitdelay * 1000);
 }
 
 char* gethttp(){

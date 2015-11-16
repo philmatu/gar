@@ -103,4 +103,11 @@ if($lineoutput > $count){
 
 }
 
+//if($stopid == "400171"){
+	//psa test
+//	echo "30*!!Heavy Delays!!\n";
+	//debug message
+//	echo "?\n";
+//}
+
 ?>

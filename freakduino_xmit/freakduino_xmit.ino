@@ -2,17 +2,20 @@
 #include <String.h>
 #include <SPI.h>
 #include <Ethernet.h>
+#include <AESLib.h>
+
+//ethernet from https://github.com/Scott216/Weather_Station_Data/tree/master/Ethernet%20Lib
 
 #define CHANNEL 3
 #define BPSK_MODE 3
 #define CHB_RATE_250KBPS 0
 #define FREAKDUINO_LONG_RANGE 1
+#define ARRAYSIZE 128
 
-char* myXmitId = "A\0";
-char stopid[] = "404190"; //x1 out front of 2 broadway
-int xmitdelay = 3;//seconds
-
-uint8_t AESKEY = 329093092;
+char* myXmitId = "A0";
+char stopid[] = "400171"; //out front of 2 broadway
+int xmitdelay = 5;//seconds
+uint8_t AESKEY[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
 
 //ETHERNET CARD
 //connected to pins 0-1, 9-13
@@ -24,7 +27,7 @@ char GETURL[] = "GET /?lines=4&id=%s HTTP/1.1";
 char serverUrl[] = "gar.mtabuscis.net";
 char* url = (char *) malloc(128);//1 malloc for entire program
 char tempTime[10];
-char* data = (char*)malloc(256*sizeof(char));
+uint8_t* plain = (uint8_t*)malloc(ARRAYSIZE*sizeof(uint8_t));
 
 void setup()
 {
@@ -32,48 +35,83 @@ void setup()
   Serial.begin(9600);
   
   Serial.println("Starting... ");
+  delay(1000);//give ethernet and wireless time to start
   
   // Init the chibi wireless stack
   chibiInit();
   chibiSetChannel(CHANNEL);
-  chibiAesInit(&AESKEY);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
-  //chibiHighGainModeEnable();
   
   chibiSetShortAddr(0);
   
   Ethernet.select(8);
   Ethernet.begin(mac);
-  Serial.println(Ethernet.localIP());          // start to listen for clients
   
-  delay(1000);
+  delay(5000);
+  
+  Serial.println(Ethernet.localIP());          // start to listen for clients
   
   Serial.println("Ready!");
 }
 
 void loop(){
+  //clean variables
+  memset(plain, 0, ARRAYSIZE*sizeof(uint8_t));
   
   ltoa(millis()/1000,tempTime,10);
   
-  strcpy(data+0, myXmitId);
-  strcpy(data+strlen(data), tempTime);
-  strcpy(data+strlen(data), "\n");
+  strcpy((char*)plain+0, myXmitId);
+  strcpy((char*)plain+strlen((char*)plain), tempTime);
+  strcpy((char*)plain+strlen((char*)plain), "\n");
   
   char* dldData = gethttp();
   int len = strlen(dldData);
   
-  strcpy(data+strlen(data), dldData);
-  
   if(len < 2){
-    delay(5000);
+    Serial.println("Nothing received.");
+    delay(2500);//delay in ethernet... try again
     return;
   }
   
-  //char* out;
-  //chibiAesEncrypt(len, (uint8_t*)data, (uint8_t*)out);
+  strcpy((char*)plain+strlen((char*)plain), dldData);
   
-  transmit(data);//just transmit the minimized data!
+  len = strlen((char*)plain);
+  int mod = 16 - (len % 16);//for AES
+  if((len + mod) < ARRAYSIZE-1) //ARRAYSIZE is size of data as a whole
+  {
+    int k = 0;
+    for(k=0; k<mod; k++){
+      strcpy((char*)plain+strlen((char*)plain), " ");
+    }
+  }else{
+    Serial.println("Critical problem... not enough buffer to handle the data!");
+    return;
+  }
+  
+  //encrypt
+  len = strlen((char*)plain);
+  
+  if(len%16 != 0 || len < 20){
+    Serial.println("Incomplete data detected, skipping transmission");
+    return;
+  }
+  
+  for(size_t ix = 0; ix < len; ix += 16) {
+    aes256_enc_single(AESKEY, plain+ix);
+  }
+  
+  /*
+  Serial.print("Encrypted Output: ");
+  int k = 0;
+  for(k=0; k<ARRAYSIZE; k++){
+    Serial.print(plain[k]);
+    Serial.print(",");
+  }
+  Serial.println();
+  */
+  
+  secure_transmit();//assumes out is populated
   
   // transmit every x seconds
   delay(xmitdelay * 1000);
@@ -86,17 +124,18 @@ char* gethttp(){
   Serial.println(url);
   
   int pointer = 0;
-  char data[256];
+  char data[ARRAYSIZE];
   if (outboundclient.connect(serverUrl, 80)) {
-    delay(50);
+    delay(250);
     outboundclient.println(url);
     outboundclient.print("Host: ");
     outboundclient.println(serverUrl);
     outboundclient.println("Connection: close\r\n");
-    delay(50);
+    delay(500);
     boolean start = false;
     int stage = 0;
     while(true){
+      //Serial.println("loop");
       if (outboundclient.available()) {
         char c = outboundclient.read();
         if(start){
@@ -139,42 +178,20 @@ char* gethttp(){
       }
     
       if (!outboundclient.connected()) {
-        delay(50);
+        delay(100);
         data[pointer] = '\0';//termination of string
         outboundclient.stop();
-        delay(50);
+        delay(100);
         return data;
       }
     }
   }
 }
 
-void transmit(char* msg){
-  
-  int len = strlen(msg)+1;
-  
-  byte data[len];
-  
-  strncpy((char *)data, msg, len);
-  data[len] = '\0';
-  
-  Serial.print("___XMIT___=");
-  Serial.print((char *)data);
-  Serial.println("___");
-  
-  //BROADCAST_ADDR
-  chibiTx(BROADCAST_ADDR, data, len);//includes null byte on xmit
-
-/*
-  //xmit duplication
-  delay(1500);
-  Serial.println("duplico");
-  chibiTx(BROADCAST_ADDR, data, len);//includes null byte on xmit
-*/
-
-  int i = 0;
-  //wipe out data var
-  for(i=0; i<len; i++){
-    data[i] = '\0';
-  }
+void secure_transmit(){
+  int len = strlen((char*)plain);
+  Serial.print("Securely transmitting ");
+  Serial.print(len);
+  Serial.println(" encrypted bytes");
+  chibiTx(BROADCAST_ADDR, plain, len);
 }

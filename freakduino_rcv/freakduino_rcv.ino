@@ -1,25 +1,27 @@
 #include <LiquidCrystal.h>
 #include <chibi.h>
+#include <AESLib.h>
 
 //TODO: need someway to reduce this to 16 bits or 65535 max
 #define STOP_ID 1235 // what is my local stop id to listen for over the air?
 
-#define VERSION "1.4"
+#define VERSION "1.5"
 #define CHANNEL 3 // use channels 1-9
 #define BPSK_MODE 3
 #define CHB_RATE_250KBPS 0
-#define HIGH_GAIN false // true/false to enable high gain mode
-#define AES_KEY 329093092 // decryption key
 #define DISPLAY_COLUMNS 16 // how many columns are there on the display?
 #define DISPLAY_LINES 2 // how many lines are on the display?
 #define SCROLL_LINES 2 // how many additional lines should the last row scroll through (doesn't include message lines)
-#define SCROLL_RATE 1 // seconds
+#define SCROLL_RATE 5 // seconds
 #define RECEIVE_TIMEOUT 180 // seconds
 #define DEFAULT_PSA_TIMEOUT 900 // seconds (900 seconds is 15 minutes), this is only used in the case of the system clock resetting after 57 days
+#define ARRAYSIZE 128
+
+uint8_t AESKEY[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
 
 //for wireless reception
-byte recvBuffer[256];
-byte recvBufferBak[256];
+uint8_t* input = (uint8_t*)malloc(ARRAYSIZE*sizeof(uint8_t));
+
 //keeping track of previous messages to avoid a repeat loop (defaults to 6)
 int lastHeaderPos = 0;
 const int lastHeaderMax = 4;
@@ -56,13 +58,8 @@ void setup()
   
   chibiInit();
   chibiSetChannel(CHANNEL);
-  chibiAesInit((uint8_t*)AES_KEY);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
-  if(HIGH_GAIN)
-  {
-    chibiHighGainModeEnable();
-  }
   chibiSetShortAddr(STOP_ID);
   lcd.begin(DISPLAY_COLUMNS, DISPLAY_LINES);
   clearReceivedData();
@@ -143,13 +140,37 @@ boolean isRCVD()
 { 
   if(chibiDataRcvd() == true)
   {
-    memset((char*)&recvBuffer[0], 0, 256);
-    int len = chibiGetData(recvBuffer);
-    memcpy(recvBufferBak, recvBuffer, 256);
+    
+    memset(input, 0, ARRAYSIZE);
+    int len = chibiGetData(input);
     receivedRSSI = chibiGetRSSI();
     
+    memset(input+len, 0, ARRAYSIZE-len);
+    
+    /*
+    Serial.print("Encrypted Input: ");
+    int k = 0;
+    for(k=0; k<ARRAYSIZE; k++){
+      Serial.print(input[k]);
+      Serial.print(",");
+    }
+    Serial.println();
+    */
+    
+    //decrypt
+    len = strlen((char*)input);
+    
+    if(len%16 != 0 || len < 20){
+      Serial.println("Incomplete data received, dropping");
+      return false;
+    }
+    
+    for(size_t ix = 0; ix < len; ix += 16) {
+      aes256_dec_single(AESKEY, input+ix);
+    }
+    
     //process the first line of the string received (strtok is destructive, later processing can resume normally as if first line doesn't exist)
-    char* dataReceivedPointer = (char*)recvBuffer;
+    char* dataReceivedPointer = (char*)input;
     char* first = strtok(dataReceivedPointer, delimeter);
     
     int i=0;
@@ -169,8 +190,7 @@ boolean isRCVD()
     lastHeaderPos = (lastHeaderPos + 1) % lastHeaderMax;
     
     //retransmit!
-    int txlen = strlen((char*)recvBufferBak)+1;
-    chibiTx(BROADCAST_ADDR, recvBufferBak, txlen);
+    chibiTx(BROADCAST_ADDR, input, len);
     return true;
     
   }
@@ -202,7 +222,7 @@ void processReceivedData()
   int count = 0;
   int maxcount = SCROLL_LINES + DISPLAY_LINES;
   
-  char* dataReceivedPointer = (char*)recvBuffer;
+  char* dataReceivedPointer = (char*)input;
   char* line = strtok(NULL, delimeter); 
   
   while(line != NULL && debugMode < 1 ) // break out of the loop if we're in debug mode
@@ -422,6 +442,7 @@ void writeDisplayUpdate()
     {
       lcd.setCursor(0, i);
       lcd.print(displayText[i]);
+      
       Serial.print(i);
       Serial.print(" < line printing to LCD. text: ");
       Serial.println(displayText[i]);

@@ -92,6 +92,11 @@ void loop(){
   //encrypt
   len = strlen((char*)plain);
   
+  Serial.print("Len ");
+  Serial.print(len);
+  Serial.print(": ");
+  Serial.println((char*)plain);
+  
   if(len%16 != 0 || len < 20){
     Serial.println("Incomplete data detected, skipping transmission");
     return;
@@ -101,17 +106,17 @@ void loop(){
     aes256_enc_single(AESKEY, plain+ix);
   }
   
-  /*
-  Serial.print("Encrypted Output: ");
+  Serial.print("Encrypted Output is ");
+  Serial.print(strlen((char*)plain));
+  Serial.print(" bytes : ");
   int k = 0;
   for(k=0; k<ARRAYSIZE; k++){
     Serial.print(plain[k]);
     Serial.print(",");
   }
   Serial.println();
-  */
   
-  secure_transmit();//assumes out is populated
+  secure_transmit(len);//assumes out is populated
   
   // transmit every x seconds
   delay(xmitdelay * 1000);
@@ -188,10 +193,7 @@ char* gethttp(){
   }
 }
 
-void secure_transmit(){
-  int len = strlen((char*)plain);
-  Serial.print("Securely transmitting ");
-  Serial.print(len);
-  Serial.println(" encrypted bytes");
+void secure_transmit(int len){
+  Serial.print("Securely transmitting");
   chibiTx(BROADCAST_ADDR, plain, len);
 }

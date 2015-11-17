@@ -158,10 +158,9 @@ boolean isRCVD()
     */
     
     //decrypt
-    len = strlen((char*)input);
-    
     if(len%16 != 0 || len < 20){
-      Serial.println("Incomplete data received, dropping");
+      Serial.print(len);
+      Serial.println(" Incomplete data, dropping");
       return false;
     }
     

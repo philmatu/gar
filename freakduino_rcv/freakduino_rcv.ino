@@ -2,8 +2,7 @@
 #include <chibi.h>
 #include <AESLib.h>
 
-//TODO: need someway to reduce this to 16 bits or 65535 max
-#define STOP_ID 1235 // what is my local stop id to listen for over the air?
+#define STOP_ID "400171" // what is my local stop id to listen for over the air?
 
 #define VERSION "1.5"
 #define CHANNEL 3 // use channels 1-9
@@ -21,6 +20,7 @@ uint8_t AESKEY[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,2
 
 //for wireless reception
 uint8_t* input = (uint8_t*)malloc(ARRAYSIZE*sizeof(uint8_t));
+uint8_t* input_enc = (uint8_t*)malloc(ARRAYSIZE*sizeof(uint8_t));
 
 //keeping track of previous messages to avoid a repeat loop (defaults to 6)
 int lastHeaderPos = 0;
@@ -34,6 +34,7 @@ unsigned short debugMode = 0;
 unsigned long lastReceivedTimeDebug = 0;
 byte receivedRSSI = 0;
 boolean scroll = false;
+char tempStopStore[7];
 
 char psa[17] = {'\0'}; // public service announcements can be up to 16 characters long or one standard display line
 unsigned long psa_timeout = 0;
@@ -60,7 +61,7 @@ void setup()
   chibiSetChannel(CHANNEL);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
-  chibiSetShortAddr(STOP_ID);
+  chibiSetShortAddr(1);//all stops have the same address due to lack of space in this spectrum (65535 isn't enough really.)
   lcd.begin(DISPLAY_COLUMNS, DISPLAY_LINES);
   clearReceivedData();
   clearReceivedPSA();
@@ -101,7 +102,7 @@ void loop()
   //check to see if the received data is too old
   if( lastReceivedTime != 0 && ( (RECEIVE_TIMEOUT * 1000L) + lastReceivedTime ) < millis() )
   {
-    Serial.print("The received data timed out, remov");
+    Serial.print("The received data timed out, removed");
     clearReceivedData();
   }
   
@@ -109,7 +110,7 @@ void loop()
   if(psa_timeout != 0 && millis() > psa_timeout)
   {
     //remove the PSA from the queue of messages to be displayed
-    Serial.print("PSA has timed out, remov");
+    Serial.print("PSA has timed out, removing");
     clearReceivedPSA();
   }
   
@@ -145,17 +146,20 @@ boolean isRCVD()
     int len = chibiGetData(input);
     receivedRSSI = chibiGetRSSI();
     
+    //set all null after full dataset to make organized in debug mode
     memset(input+len, 0, ARRAYSIZE-len);
     
-    /*
-    Serial.print("Encrypted Input: ");
+    //copy input to input_enc for possible retransmission
+    memcpy((uint8_t*)input_enc, input, len);
+    
+    Serial.print("Originally received Input: ");
     int k = 0;
     for(k=0; k<ARRAYSIZE; k++){
       Serial.print(input[k]);
       Serial.print(",");
     }
     Serial.println();
-    */
+    
     
     //decrypt
     if(len%16 != 0 || len < 20){
@@ -170,12 +174,26 @@ boolean isRCVD()
     
     //process the first line of the string received (strtok is destructive, later processing can resume normally as if first line doesn't exist)
     char* dataReceivedPointer = (char*)input;
-    char* first = strtok(dataReceivedPointer, delimeter);
+    strncpy(tempStopStore, dataReceivedPointer, 6);
+    tempStopStore[6] = '\0';
+    
+    if(strcmp(STOP_ID, tempStopStore) == 0){
+      //same
+      Serial.println("Matched stop!");
+    }else{
+      Serial.println("Wrong stop!");
+    }
+    
+    char* first = strtok(dataReceivedPointer+6, delimeter);
     
     int i=0;
-    //have we seen this message before?
+    //have we seen this sender id / time before?  This protects against multiple stops having same id at same time.'
+    Serial.print("currently: ");
+    Serial.println(first);
     for(i=0; i<lastHeaderMax; i++)
     {
+      Serial.print("Seen: ");
+      Serial.println(lastHeader[i]);
       if(strcmp(lastHeader[i], first) == 0)
       {
         //data is same
@@ -184,12 +202,24 @@ boolean isRCVD()
       }
     }   
     
-    Serial.println("Receiving NEW data, retransmission now then processing.");
     strcpy(lastHeader[lastHeaderPos], first);
     lastHeaderPos = (lastHeaderPos + 1) % lastHeaderMax;
     
-    //retransmit!
-    chibiTx(BROADCAST_ADDR, input, len);
+    //retransmit if someone else's stop and not mine!
+    if(strcmp(STOP_ID, tempStopStore) == 0){ }else{
+      Serial.print("Retransmission of encrypted Input len ");
+      Serial.print(len);
+      Serial.print(" : ");
+      k = 0;
+      for(k=0; k<len; k++){
+        Serial.print(input_enc[k]);
+        Serial.print(",");
+      }
+      Serial.println();
+      chibiTx(BROADCAST_ADDR, input_enc, len);
+      return false;
+    }
+    
     return true;
     
   }
@@ -361,7 +391,7 @@ void updateDisplay()
     {
       //we don't want to quite scroll yet if the update is triggered by new data
       --displaySelector;
-      Serial.println("Not scrolling");
+      //Serial.println("Not scrolling");
     }
     
     //is there enough data to consider writing a final round robin line?

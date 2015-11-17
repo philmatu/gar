@@ -11,9 +11,9 @@
 #define CHB_RATE_250KBPS 0
 #define FREAKDUINO_LONG_RANGE 1
 #define ARRAYSIZE 128
+#define STOPSCOUNT 2 //how many stops are there for us?
 
 char* myXmitId = "A0";
-char stopid[] = "400171"; //out front of 2 broadway
 int xmitdelay = 5;//seconds
 uint8_t AESKEY[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
 
@@ -27,10 +27,15 @@ char GETURL[] = "GET /?lines=4&id=%s HTTP/1.1";
 char serverUrl[] = "gar.mtabuscis.net";
 char* url = (char *) malloc(128);//1 malloc for entire program
 char tempTime[10];
+char stopid[STOPSCOUNT][7];//6 characters and the terminating null
 uint8_t* plain = (uint8_t*)malloc(ARRAYSIZE*sizeof(uint8_t));
 
 void setup()
 {
+  
+  //initialize stops, eventually this might be a query to gar.mtabuscis.net for stops that I'm responsible for (using myXmitId var)
+  strcpy(stopid[0], "400171");
+  strcpy(stopid[1], "404190");
   
   Serial.begin(9600);
   
@@ -56,16 +61,28 @@ void setup()
 }
 
 void loop(){
-  //clean variables
-  memset(plain, 0, ARRAYSIZE*sizeof(uint8_t));
+    //clean variables
+    memset(plain, 0, ARRAYSIZE*sizeof(uint8_t));
+    
+    for(int i=0; i<STOPSCOUNT; i++){
+      transmit_stop(i);
+      delay(100);//give ethernet time to settle
+    }
+    
+    // transmit every x seconds
+    delay(xmitdelay * 1000);
+}
+
+void transmit_stop(int numberedStop){
   
   ltoa(millis()/1000,tempTime,10);
   
-  strcpy((char*)plain+0, myXmitId);
+  strcpy((char*)plain+0, stopid[numberedStop]);// should be 6 characters (numbers)
+  strcpy((char*)plain+strlen((char*)plain), myXmitId);
   strcpy((char*)plain+strlen((char*)plain), tempTime);
   strcpy((char*)plain+strlen((char*)plain), "\n");
   
-  char* dldData = gethttp();
+  char* dldData = gethttp(stopid[numberedStop]);
   int len = strlen(dldData);
   
   if(len < 2){
@@ -106,9 +123,7 @@ void loop(){
     aes256_enc_single(AESKEY, plain+ix);
   }
   
-  Serial.print("Encrypted Output is ");
-  Serial.print(strlen((char*)plain));
-  Serial.print(" bytes : ");
+  Serial.print("Encrypted Output:");
   int k = 0;
   for(k=0; k<ARRAYSIZE; k++){
     Serial.print(plain[k]);
@@ -117,12 +132,9 @@ void loop(){
   Serial.println();
   
   secure_transmit(len);//assumes out is populated
-  
-  // transmit every x seconds
-  delay(xmitdelay * 1000);
 }
 
-char* gethttp(){
+char* gethttp(char* stopid){
   sprintf(url, GETURL, stopid);
   
   Serial.print("Requesting url: ");
@@ -194,6 +206,6 @@ char* gethttp(){
 }
 
 void secure_transmit(int len){
-  Serial.print("Securely transmitting");
+  Serial.println("Securely transmitting");
   chibiTx(BROADCAST_ADDR, plain, len);
 }

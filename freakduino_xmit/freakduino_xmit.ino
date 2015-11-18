@@ -47,6 +47,7 @@ void setup()
   chibiSetChannel(CHANNEL);
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
+  chibiHighGainModeDisable();
   
   chibiSetShortAddr(0);
   

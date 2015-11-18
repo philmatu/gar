@@ -2,7 +2,7 @@
 #include <chibi.h>
 #include <AESLib.h>
 
-#define STOP_ID "400171" // what is my local stop id to listen for over the air?
+#define STOP_ID "404190" // what is my local stop id to listen for over the air?
 
 #define VERSION "1.5"
 #define CHANNEL 3 // use channels 1-9
@@ -59,6 +59,7 @@ void setup()
   
   chibiInit();
   chibiSetChannel(CHANNEL);
+  chibiHighGainModeDisable();
   chibiSetMode(BPSK_MODE);
   chibiSetDataRate(CHB_RATE_250KBPS);
   chibiSetShortAddr(1);//all stops have the same address due to lack of space in this spectrum (65535 isn't enough really.)

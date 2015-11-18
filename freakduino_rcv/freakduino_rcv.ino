@@ -153,6 +153,7 @@ boolean isRCVD()
     //copy input to input_enc for possible retransmission
     memcpy((uint8_t*)input_enc, input, len);
     
+    /*
     Serial.print("Originally received Input: ");
     int k = 0;
     for(k=0; k<ARRAYSIZE; k++){
@@ -160,7 +161,7 @@ boolean isRCVD()
       Serial.print(",");
     }
     Serial.println();
-    
+    */
     
     //decrypt
     if(len%16 != 0 || len < 20){
@@ -178,36 +179,45 @@ boolean isRCVD()
     strncpy(tempStopStore, dataReceivedPointer, 6);
     tempStopStore[6] = '\0';
     
+    /*
     if(strcmp(STOP_ID, tempStopStore) == 0){
       //same
       Serial.println("Matched stop!");
     }else{
       Serial.println("Wrong stop!");
     }
+    */
     
     char* first = strtok(dataReceivedPointer+6, delimeter);
     
     int i=0;
     //have we seen this sender id / time before?  This protects against multiple stops having same id at same time.'
-    Serial.print("currently: ");
-    Serial.println(first);
+    //Serial.print("currently: ");
+    //Serial.println(first);
     for(i=0; i<lastHeaderMax; i++)
     {
-      Serial.print("Seen: ");
-      Serial.println(lastHeader[i]);
+      //Serial.print("Seen: ");
+      //Serial.println(lastHeader[i]);
       if(strcmp(lastHeader[i], first) == 0)
       {
         //data is same
-        Serial.println("Receiving OLD data, nothing happens now.");
+        Serial.print("Dropping previously seen packet for stop ");
+        Serial.println(tempStopStore);
         return false;
       }
-    }   
+    }
     
     strcpy(lastHeader[lastHeaderPos], first);
     lastHeaderPos = (lastHeaderPos + 1) % lastHeaderMax;
     
     //retransmit if someone else's stop and not mine!
-    if(strcmp(STOP_ID, tempStopStore) == 0){ }else{
+    if(strcmp(STOP_ID, tempStopStore) == 0){ 
+      Serial.print("Accepting new update for stop ");
+      Serial.println(tempStopStore);
+    }else{
+      Serial.print("Meshing non-relevant update for stop ");
+      Serial.println(tempStopStore);
+      /*
       Serial.print("Retransmission of encrypted Input len ");
       Serial.print(len);
       Serial.print(" : ");
@@ -217,7 +227,9 @@ boolean isRCVD()
         Serial.print(",");
       }
       Serial.println();
+      */
       chibiTx(BROADCAST_ADDR, input_enc, len);
+      delay(50);
       return false;
     }
     

@@ -11,10 +11,9 @@
 #define CHB_RATE_250KBPS 0
 #define FREAKDUINO_LONG_RANGE 1
 #define ARRAYSIZE 128
-#define STOPSCOUNT 2 //how many stops are there for us?
+#define STOPSCOUNT 4 //how many stops are there for us?
 
 char* myXmitId = "A0";
-int xmitdelay = 5;//seconds
 uint8_t AESKEY[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
 
 //ETHERNET CARD
@@ -36,6 +35,8 @@ void setup()
   //initialize stops, eventually this might be a query to gar.mtabuscis.net for stops that I'm responsible for (using myXmitId var)
   strcpy(stopid[0], "400171");
   strcpy(stopid[1], "404190");
+  strcpy(stopid[2], "401779");
+  strcpy(stopid[3], "203344");
   
   Serial.begin(9600);
   
@@ -67,11 +68,8 @@ void loop(){
     
     for(int i=0; i<STOPSCOUNT; i++){
       transmit_stop(i);
-      delay(100);//give ethernet time to settle
+      delay(1000);//give ethernet time to settle
     }
-    
-    // transmit every x seconds
-    delay(xmitdelay * 1000);
 }
 
 void transmit_stop(int numberedStop){
@@ -144,12 +142,12 @@ char* gethttp(char* stopid){
   int pointer = 0;
   char data[ARRAYSIZE];
   if (outboundclient.connect(serverUrl, 80)) {
-    delay(250);
+    delay(100);
     outboundclient.println(url);
     outboundclient.print("Host: ");
     outboundclient.println(serverUrl);
     outboundclient.println("Connection: close\r\n");
-    delay(500);
+    delay(250);
     boolean start = false;
     int stage = 0;
     while(true){
@@ -196,7 +194,7 @@ char* gethttp(char* stopid){
       }
     
       if (!outboundclient.connected()) {
-        delay(100);
+        delay(50);
         data[pointer] = '\0';//termination of string
         outboundclient.stop();
         delay(100);

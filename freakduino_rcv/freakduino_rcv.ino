@@ -2,11 +2,12 @@
 #include <chibi.h>
 #include <AESLib.h>
 
-#define STOP_ID "404190" // what is my local stop id to listen for over the air?
+#define STOP_ID "401779" // what is my local stop id to listen for over the air?
 
 #define VERSION "1.5"
 #define CHANNEL 3 // use channels 1-9
 #define BPSK_MODE 3
+
 #define CHB_RATE_250KBPS 0
 #define DISPLAY_COLUMNS 16 // how many columns are there on the display?
 #define DISPLAY_LINES 2 // how many lines are on the display?

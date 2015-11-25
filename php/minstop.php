@@ -40,7 +40,7 @@ if(!is_numeric($stopid)){
 	exit();
 }
 
-$url_template = "http://bustime.mta.info/api/siri/stop-monitoring.json?key=TEST&OperatorRef=MTA&StopMonitoringDetailLevel=minimum&MonitoringRef=%d";
+$url_template = "http://bustime.mta.info/api/siri/stop-monitoring.json?key=GARPLUS&OperatorRef=MTA&StopMonitoringDetailLevel=minimum&MonitoringRef=%d";
 
 $url = sprintf($url_template, $stopid);
 
